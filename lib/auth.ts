@@ -10,8 +10,8 @@ export function verifySession(cookie: string | undefined): Role | null {
 }
 
 // For use in Server Components and Route Handlers only (not middleware).
-export function getRole(): Role | null {
-  const cookieStore = cookies()
+export async function getRole(): Promise<Role | null> {
+  const cookieStore = await cookies()
   const session = cookieStore.get('session')?.value
   return verifySession(session)
 }
