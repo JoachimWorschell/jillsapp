@@ -3,47 +3,62 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const FIELDS = [
-  { key: 'favorite_foods',      label: 'Favorite Foods',   placeholder: 'What she loves to eat…' },
-  { key: 'favorite_flowers',    label: 'Favorite Flowers', placeholder: 'Flowers she adores…' },
-  { key: 'favorite_songs',      label: 'Favorite Songs',   placeholder: 'Songs she keeps coming back to…' },
-  { key: 'gift_ideas',          label: 'Gift Ideas',       placeholder: 'Things she might love…' },
-  { key: 'important_dates',     label: 'Important Dates',  placeholder: 'Dates that matter…' },
-  { key: 'things_she_likes',    label: 'Things She Likes', placeholder: 'Hobbies, activities, anything…' },
-  { key: 'things_she_dislikes', label: "Doesn't Like",     placeholder: 'Things to avoid…' },
-  { key: 'notes',               label: 'My Notes',         placeholder: 'Anything else to remember…' },
+interface Reminder {
+  id: string
+  category: string
+  text: string
+  created_at: string
+}
+
+const CATEGORIES = [
+  { value: 'food_spot',      label: 'Food Spot' },
+  { value: 'flowers',        label: 'Flowers' },
+  { value: 'songs',          label: 'Songs' },
+  { value: 'gift',           label: 'Gift' },
+  { value: 'important_date', label: 'Important Date' },
+  { value: 'misc',           label: 'Misc' },
 ]
 
-export default function AboutPage() {
-  const [about,   setAbout]   = useState<Record<string, string>>({})
-  const [role,    setRole]    = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
-  const [draft,   setDraft]   = useState<Record<string, string>>({})
-  const [saving,  setSaving]  = useState(false)
+function shortDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
-  useEffect(() => {
-    fetch('/api/about')
-      .then(r => r.json())
-      .then(d => { setAbout(d.about ?? {}); setDraft(d.about ?? {}) })
-    fetch('/api/auth/me')
-      .then(r => r.json())
-      .then(d => setRole(d.role))
-  }, [])
+export default function RemindersPage() {
+  const [reminders,   setReminders]   = useState<Reminder[]>([])
+  const [category,    setCategory]    = useState('food_spot')
+  const [text,        setText]        = useState('')
+  const [saving,      setSaving]      = useState(false)
+  const [showForm,    setShowForm]    = useState(false)
+
+  async function load() {
+    const res = await fetch('/api/reminders')
+    const data = await res.json()
+    setReminders(data.reminders ?? [])
+  }
+
+  useEffect(() => { load() }, [])
 
   async function save() {
+    if (!text.trim() || saving) return
     setSaving(true)
-    await Promise.all(
-      Object.entries(draft).map(([key, value]) =>
-        fetch('/api/about', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, value }),
-        })
-      )
-    )
-    setAbout(draft)
-    setEditing(false)
+    await fetch('/api/reminders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, text }),
+    })
+    setText('')
+    setShowForm(false)
+    await load()
     setSaving(false)
+  }
+
+  async function remove(id: string) {
+    await fetch('/api/reminders', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setReminders(r => r.filter(x => x.id !== id))
   }
 
   return (
@@ -51,40 +66,77 @@ export default function AboutPage() {
 
       <div className="sticky top-0 z-10 bg-warm-50/80 backdrop-blur-md px-4 py-4 border-b border-warm-200/40">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-serif text-warm-800">About Jill</h1>
-          {role === 'admin' && !editing && (
-            <button onClick={() => setEditing(true)} className="btn-secondary py-2 px-4">Edit</button>
-          )}
+          <h1 className="text-xl font-serif text-warm-800">Reminders</h1>
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="btn-primary py-2 px-4"
+          >
+            {showForm ? 'Cancel' : '+ New'}
+          </button>
         </div>
       </div>
 
       <div className="p-4 space-y-3">
-        {FIELDS.map(field => (
-          <div key={field.key} className="card p-4">
-            <p className="text-warm-500 text-xs mb-2 uppercase tracking-widest">{field.label}</p>
-            {editing && role === 'admin' ? (
+
+        {/* Add form */}
+        {showForm && (
+          <div className="card p-4 space-y-3">
+            <div>
+              <p className="text-warm-500 text-xs uppercase tracking-widest mb-2">Category</p>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="input"
+              >
+                {CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-warm-500 text-xs uppercase tracking-widest mb-2">Note</p>
               <textarea
-                value={draft[field.key] ?? ''}
-                onChange={e => setDraft(d => ({ ...d, [field.key]: e.target.value }))}
-                placeholder={field.placeholder}
-                className="w-full bg-transparent text-warm-800 text-sm resize-none outline-none placeholder-warm-300 leading-relaxed"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder="Write your reminder..."
+                className="input resize-none"
                 rows={3}
               />
-            ) : (
-              <p className="text-warm-800 text-sm leading-relaxed whitespace-pre-wrap">
-                {about[field.key] || <span className="text-warm-300 italic">Not filled in yet</span>}
-              </p>
-            )}
-          </div>
-        ))}
-
-        {editing && (
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => { setEditing(false); setDraft(about) }} className="btn-secondary flex-1">Cancel</button>
-            <button onClick={save} disabled={saving} className="btn-primary flex-1">
+            </div>
+            <button
+              onClick={save}
+              disabled={!text.trim() || saving}
+              className="btn-primary w-full"
+            >
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
+        )}
+
+        {/* Reminders list */}
+        {reminders.length === 0 && !showForm ? (
+          <div className="card p-8 text-center">
+            <p className="text-warm-500 font-medium">No reminders yet</p>
+            <p className="text-warm-400 text-sm mt-1">Tap + New to add one</p>
+          </div>
+        ) : (
+          reminders.map(rem => (
+            <div key={rem.id} className="card p-4 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-warm-400 text-[10px] uppercase tracking-widest mb-1">
+                  {CATEGORIES.find(c => c.value === rem.category)?.label ?? rem.category}
+                  <span className="ml-2 normal-case">{shortDate(rem.created_at)}</span>
+                </p>
+                <p className="text-warm-800 text-sm leading-relaxed">{rem.text}</p>
+              </div>
+              <button
+                onClick={() => remove(rem.id)}
+                className="text-warm-300 hover:text-warm-500 transition-colors flex-shrink-0 text-xl leading-none mt-0.5"
+              >
+                ×
+              </button>
+            </div>
+          ))
         )}
       </div>
 
