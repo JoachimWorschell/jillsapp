@@ -245,7 +245,7 @@ function CountdownCard({ label, target }: { label: string; target: Date }) {
     return (
       <div className="card px-5 py-4 text-center">
         <p className="text-warm-400 text-[10px] uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-warm-800 font-serif text-xl">Today 🎉</p>
+        <p className="text-warm-800 font-serif text-xl">Today</p>
       </div>
     )
   }

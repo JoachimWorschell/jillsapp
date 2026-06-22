@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
+import SessionGuard from '@/components/SessionGuard'
 import './globals.css'
 
 const inter = Inter({
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen font-sans antialiased" style={{ backgroundColor: '#E2DDD5' }}>
+        <SessionGuard />
         {children}
       </body>
     </html>

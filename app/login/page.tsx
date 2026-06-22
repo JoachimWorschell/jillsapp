@@ -35,6 +35,8 @@ export default function LoginPage() {
         body: JSON.stringify({ pin: code }),
       })
       if (res.ok) {
+        // Mark this browser session as active so SessionGuard knows it's fresh
+        sessionStorage.setItem('jill_active', '1')
         // Trigger zoom-in unlock animation, then navigate
         setUnlocking(true)
         setTimeout(() => router.push('/home'), 650)
