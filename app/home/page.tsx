@@ -394,7 +394,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: '#E2DDD5' }}>
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#E2DDD5', animation: 'unlockIn 0.55s ease-out both' }}>
 
       {/* Mount Rushmore hero */}
       <div className="relative w-full overflow-hidden" style={{ height: '300px' }}>
